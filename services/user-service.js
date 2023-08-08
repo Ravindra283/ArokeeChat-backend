@@ -1,6 +1,6 @@
 const UserModel = require('../models/user-model');
 const bcrypt = require("bcrypt")
-
+const validator = require('validator');
 
 /**
  * @param {Express.Request} req
@@ -13,17 +13,14 @@ async function login(req, res) {
 
     const user = await UserModel.findOne({ email: email });
     if (!user) {
-      // res.send({ message: "User not exist!" })
       throw new Error("User not exist!");
     }
 
-    if (await bcrypt.compare(password, user.password)) {
+    if (!await bcrypt.compare(password, user.password)) {
       console.log("---------> Login Successful")
-      return user
-    } else {
-      console.log("---------> Password Incorrect")
       res.status(400).json({ message: "Password incorrect!" })
     }
+    return user
   }
   catch (error) {
     res.status(400).json({ message: error.message })
@@ -53,10 +50,19 @@ async function getAllUsers(req, res) {
  */
 async function createUser(req, res) {
   try {
-    const oldUser = await UserModel.findOne({ email: req.body.email });
+    const oldUser = await UserModel.findOne({
+      $or: [
+        { email: req.body.email },
+        { name: req.body.name }
+      ]
+    });
 
-    if (oldUser) {
-      res.status(400).json({ message: 'User Already Exist' })
+    if (oldUser && oldUser.email == req.body.email) {
+      throw new Error('User With This Email Already Exist')
+    } else if (oldUser && oldUser.name == req.body.name) {
+      throw new Error("User With This Name Already Exist!");
+    } else if (!validator.isEmail(req.body.email)) {
+      throw new Error("Please Enter Valid Email!");
     }
 
     const user = new UserModel({
