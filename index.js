@@ -20,9 +20,6 @@ app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-// app.get('/', (req, res) => {
-//   res.send("Hello World");
-// });
 const mongoUrl = process.env.DATABASE_URL
 mongoose.connect(mongoUrl);
 const database = mongoose.connection
@@ -37,13 +34,8 @@ database.once('connected', () => {
 app.use('/api', routes)
 
 let onlineUsers = [];
-// let roomName = 'randomRoom'
 io.on('connection', (socket) => {
   socket.join(socket.id);
-
-  console.log('a user connected', socket.id);
-
-
 
   socket.on("join", ({ roomName, userId }) => {
     if (!onlineUsers.some((user) => user.userId === userId)) {  // if user is not added before
@@ -51,13 +43,11 @@ io.on('connection', (socket) => {
       console.log("new user is here!", onlineUsers);
       io.emit("get-users", onlineUsers);
     }
-    console.log(roomName);
     socket.join(roomName);
   })
   // send all active users to new user
 
   socket.on('message', (message) => {
-    console.log('message : ', message);
     socket.broadcast.to(message.roomName).emit('message', message);
     chatService.createChat(message);
   })
@@ -66,7 +56,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('user disconnected')
     onlineUsers = onlineUsers.filter((user) => user.socketId !== socket.id);
-    console.log("user disconnected", onlineUsers);
     // send all online users to all users
     io.emit("get-users", onlineUsers);
   })
